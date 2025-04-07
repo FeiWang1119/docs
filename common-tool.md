@@ -4,7 +4,7 @@ editor: notepad++
 git: lazygit
 dbclient: dbeaver
 mergetool: WinMerge
-dll: ListDlls, Dependencies
+dll: Dependency Walker, dllListDlls, Dependencies
 pdf: SumatraPDF
 window: Q-Dir
 screenshot: Flameshot
