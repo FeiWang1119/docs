@@ -61,3 +61,13 @@ and to member functions as a whole.
 - Compilers enforce bitwise constness, but you should program using logical constness.
 - When const and non-const member functions have essentially identical implementations,
 code duplication can be avoided by having the non-const version call the const version.
+
+
+## Item 5: Know what functions C++ silently writes and calls
+
+Things to Remember
+
+- Compilers may implicitly generate a class's default constructor,
+copy constructor, copy assignment operator, and destructor.
+
+## Item 6: Explicitly disallow the use of compiler-generated functions you do not want
