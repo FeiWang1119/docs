@@ -71,3 +71,20 @@ Things to Remember
 copy constructor, copy assignment operator, and destructor.
 
 ## Item 6: Explicitly disallow the use of compiler-generated functions you do not want
+
+Things to Remember
+
+• To disallow functionality automatically provided by compilers,
+declare the corresponding member functions private and give
+no implementations. Using a base class like Uncopyable is one
+way to do this.
+
+## Item 7: Declare destructors virtual in polymorphic base classes
+
+Things to Remember
+
+• Polymorphic base classes should declare virtual destructors. If
+a class has any virtual functions, it should have a virtual
+destructor.
+• Classes not designed to be base classes or not designed to be
+used polymorphically should not declare virtual destructors.
