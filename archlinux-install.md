@@ -1,7 +1,15 @@
+# 虚拟机安装
+
+设置启动为UFEI引导
+虚拟机设置 -> 选项  -> 高级 -> 固件类型：UEFI
+
 1.测试网络联通性
 
 ```sh
-ping www.baidu.com
+passwd                       # 设置root用户密码
+ping www.baidu.com           # 测试网络联通性
+ip a                         # 查看网卡信息ip
+ssh root@192.168.31.184      # 远程登录
 ```
 
 2.更新系统时钟
@@ -28,6 +36,10 @@ Server = http://mirror.lzu.edu.cn/archlinux/$repo/os/$arch             # 兰州�
 lsblk           # 显示当前分区情况
 cfdisk /dev/sda # 对安装 archlinux 的磁盘分区
                 # Swap 分区建议为电脑内存大小的 60%, 引导分区boot（1G），剩余给默认类型 linux filesystem
+                #  Device    name     size       type
+                #  /dev/sda1 EFI分区   500MB      EFI System
+                #  /dev/sda2 swap分区  4GB        Linux swap
+                #  /dev/sda3 根分区    剩余空间     Linux filesystem
 fdisk -l        # 复查磁盘情况
 
 mkfs.fat -F 32 /dev/sda1 # 格式化启动分区
@@ -37,8 +49,8 @@ mkfs.ext4 /dev/sda3      # 使用 ext4 格式化根分区
 mount /dev/sda1 /mnt/boot --mkdir # 挂载启动分区
 swapon /dev/sda2                  # 启动交换分区
 mount /dev/sda3 /mnt              # 挂载根分区
-mkdir -p /mnt/boot/EFI
-mount /dev/sda1 /mnt/boot/EFI     # 挂载 EFI 分区
+mkdir -p /mnt/boot/efi
+mount /dev/sda1 /mnt/boot/efi     # 挂载 EFI 分区
 ```
 
 5.安装基础软件包
@@ -74,20 +86,22 @@ systemctl enable NetworkManager
 - 配置时区
 
 ```sh
-ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime # 设置时区
+hwclock --systohc                                       # 同步硬件时间到系统时间
 ```
 
 - 配置本地字符编码
-
-编辑 /etc/locale.gen 文件，取消 en_US.UTF-8 UTF-8 和 zh_CN.UTF-8 UTF-8 这两行前的注释信息。
-执行 locale-gen 命令生成本地字符集信息。
-创建 /etc/locale.conf 文件，内容为：LANG=en_US.UTF-8
+```sh
+vim /etc/locale.gen  # 取消 en_US.UTF-8 UTF-8 和 zh_CN.UTF-8 UTF-8 注释
+locale-gen           # 生成本地字符集信息。
+vim /etc/locale.conf # 添加内容为：LANG=en_US.UTF-8
+```
 
 - 配置用户
 
 ```sh
 passwd                               # 设置 root 账号密码
-useradd -m -G wheel -s /bin/bash fei # 添加普通用户，并加入到 wheel 用户组，以方便使用 sudo 命令来执行一些需要超级用户权限的操作
+useradd -m -G wheel -s /bin/bash fei # 添加普通用户，并加入到 wheel 用户组，以便使用 sudo 命令来执行一些需要超级用户权限的操作
 vim /etc/sudoers                     # 移除 # %wheel ALL=(ALL) ALL 这一行前的井号，使 wheel 用户组的用户都可以正常执行 sudo 命令
 passwd fei                           # 给新用户设置密码
 ```
@@ -103,23 +117,27 @@ vim /etc/hosts
 127.0.1.1   feiarch.localdomain feiarch
 ```
 
-- 配置硬件时间
-
-```sh
-hwclock --systohc
-```
-
 - 配置引导程序
 
 ```sh
-pacman -S grub efibootmgr
-grub-install --recheck /dev/sda      # 安装 GRUB 引导信息至指定的硬盘
-grub-mkconfig -o /boot/grub/grub.cfg # 生成并写入 GRUB 配置信息
+pacman -S grub efibootmgr efivar intel-ucode # 安装启动及驱动相关包
+grub-install --recheck /dev/sda              # 安装 GRUB 引导信息至指定的硬盘
+grub-mkconfig -o /boot/grub/grub.cfg         # 生成并写入 GRUB 配置信息
 ```
 
-9. 进入新系统
+- 配置ssh和网络
+  
+```sh
+pacman -S openssh                        # 安装ssh
+systemctl enable sshd                    # 启动ssh服务
+pacman -S networkmanager                 # 安装网络管理器
+systemctl enable NetworkManager          # 启动网络管理器
+```
+
+- 进入新系统
 
 ```sh
-exit           # 退出 chroot环境
-umount -R /mnt # 卸载之前挂载的分区
+exit                  # 退出 chroot环境
+umount -R /mnt        # 卸载之前挂载的分区
+reboot                # 重启
 ```
