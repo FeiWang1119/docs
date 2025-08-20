@@ -111,6 +111,23 @@
 | dbus-monitor --session interface=org.freedesktop.Notifications | 监听dbus服务接口                 |
 | GLib.Variant('b', False)                                       | d-feet Variant 变量格式          |
 
+# tmux
+| command                          | description |
+|----------------------------------|-------------|
+| tmux new -s name                 | 创建一个新的session |
+| tmux attach -t name              | 连接到session name  |
+| tmux ls                          | 查看session         |
+| tmux kill-session -t name        | 关闭session         |
+| tmux kill-server                 | 关闭server          |
+| tmux new-session -s name -n name | 创建一个新的session |
+| tmux rename-session -t old new   | 重命名session       |
+| tmux new-window -t name -n name  | 创建一个新的window  |
+| tmux rename-window -t old new    | 重命名window        |
+| tmux list-windows -t name        | 查看window          |
+| tmux kill-window -t name         | 关闭window          |
+| tmux select-pane -t name         | 选择pane            |
+| tmux split-window -t name -h     | 分割window          |
+
 # DTK
 
 | command                       | description  |
