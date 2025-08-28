@@ -128,6 +128,22 @@
 | tmux select-pane -t name         | 选择pane            |
 | tmux split-window -t name -h     | 分割window          |
 
+# rg args
+
+| command                       | description                   |
+|-------------------------------|-------------------------------|
+| -t js                         | 按文件类型搜索，查找js文件    |
+| -g "*.js"                     | 按通配符文件，查找所有js文件  |
+| --iglob "*.JS"                | 不区分大小写的通配符搜索      |
+| --no-ignore                   | 忽略掉.gitignore文件          |
+| -i                            | 不区分大小写                  |
+| -s                            | 智能大小写（如果有大写则区分）|
+| -F                            | 全字匹配，（禁用regex)        |
+| -e                            | 正则表达式                    |
+| -v                            | 反向匹配（不包含）            |
+| -x                            | 整行匹配                      |
+| --hidden                      | 搜索隐藏文件                  |
+
 # DTK
 
 | command                       | description  |

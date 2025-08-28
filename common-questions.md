@@ -34,3 +34,14 @@ ssh-add -l -E sha256
 ```
 
    [reference url]( https://confluence.atlassian.com/bitbucketserverkb/ssh-rsa-key-rejected-with-message-no-mutual-signature-algorithm-1026057701.html)
+
+# github ssh 网络问题
+
+1. 安装gh （github-cli)
+
+```sh
+gh auth login
+```
+
+登录认证，选择协议http
+
