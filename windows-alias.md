@@ -1,0 +1,37 @@
+1 create doskey_macro.
+
+```
+h=doskey /history
+ps=tasklist $*
+ls=dir /a /x $*
+lt=dir /a /x /od $*
+d=cd %USERPROFILE%\desktop
+p=ping yahoo.com -n 1 || ping 8.8.8.8 -n 1
+findgrep=dir /s /a /b \*$1*
+n=notepad $*
+e=explorer .
+cya=shutdown /f /s /t 0
+reboot=shutdown /f /r /t 0
+pspath=wmic process get processid,parentprocessid,executablepath
+psg=tasklist | findstr /i $1
+nsg=netstat -nao | findstr /i $1
+nd=mkdir $1 $t cd $1
+cp=copy $*
+mv=move $*
+ifconfig=ipconfig $*
+macros=doskey /macros
+ip=powershell -noni -nop -ep bypass -c "$c=new-object System.Net.WebClient;$e=$c.DownloadString('http://icanhazip.com');write-host $e"
+..=cd ..
+home=cd %USERPROFILE%
+```
+
+2 Make the Doskey Macros Persistent
+
+
+```
+reg query "hklm\software\microsoft\command processor" /v autorun
+reg add "hklm\software\microsoft\command processor" /v autorun /t reg_expand_sz /d "doskey /listsize=999 /macrofile=c:\users\opsdisk\doskey_macros.txt" /f
+
+```
+
+reference: https://github.com/opsdisk/doskeys
