@@ -141,3 +141,19 @@ exit                  # 退出 chroot环境
 umount -R /mnt        # 卸载之前挂载的分区
 reboot                # 重启
 ```
+
+- 常用开发软件工具安装
+
+```sh
+pacman -S zsh               # 安装zsh
+pacman -S fzf bar zoxide    # 安装fzf 和 bar 和 zoxide
+pacman -S gcc gdb           # 安装gcc 和 gdb
+pacman -S git github-cli    # 安装git 和 github-cli
+pacman -S cmake ninja       # 安装cmake 和 ninja
+pacman -S tmux tmuxp        # 安装tmux
+pacman -S nvim              # 安装nvim
+pacman -S ripgrep           # 安装ripgrep
+pacman -S python            # 安装python
+pacman -S npm               # 安装npm
+pacman -S lazygit           # 安装lazygit
+```
