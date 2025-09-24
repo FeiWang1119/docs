@@ -156,4 +156,7 @@ pacman -S ripgrep           # 安装ripgrep
 pacman -S python            # 安装python
 pacman -S npm               # 安装npm
 pacman -S lazygit           # 安装lazygit
+pacman -S zip unzip         # 安装zip 和 unzip
+
+pacman -S zsh fzf bar zoxide gcc gdb git github-cli cmake ninja tmux tmuxp nvim ripgrep python npm lazygit zip unzip go
 ```
