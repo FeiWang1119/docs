@@ -295,13 +295,15 @@ public:
             throw std::logic_error("mutex hierarchy violated");
         // it’s important to save the previous value of the hierarchy value for the current
         // thread so you can restore it in unlock(); otherwise you’d never be able to
-        // lock a mutex with a higher hierarchy value again, even if the thread didn’t hold any locks.
+        // lock a mutex with a higher hierarchy value again, even if the thread didn’t hold any
+        // locks.
         this_thread_hierarchy_value = previous_hierarchy_value;
         internal_mutex.unlock();
     }
 
     // if the lock on the mutex is held by another thread,
-    // it returns false rather than waiting until the calling thread can acquire the lock on the mutex.
+    // it returns false rather than waiting until the calling thread can acquire the lock on the
+    // mutex.
     bool try_lock()
     {
         check_for_hierarchy_violation();
@@ -356,5 +358,228 @@ void thread_b()
     std::lock_guard<hierarchical_mutex> lk(other_mutex);
     other_stuff();
 }
+
+// Listing 3.9 Using std::lock() and std::unique_lock in a swap operation
+class some_big_object;
+void swap(some_big_object &lhs, some_big_object &rhs);
+
+class X
+{
+private:
+    some_big_object some_detail;
+    std::mutex m;
+
+public:
+    X(some_big_object const &sd)
+        : some_detail(sd)
+    {
+    }
+
+    friend void swap(X &lhs, X &rhs)
+    {
+        if (&lhs == &rhs)
+            return;
+        // Pass std::defer_lock as the second argument to indicate that the mutex should remain
+        // unlocked on construction
+        // The lock can then be acquired later by calling lock() on the std::unique_lock object (not
+        // the mutex)
+        std::unique_lock<std::mutex> lock_a(lhs.m, std::defer_lock);
+        std::unique_lock<std::mutex> lock_b(rhs.m, std::defer_lock);
+        std::lock(lock_a, lock_b);
+        swap(lhs.some_detail, rhs.some_detail);
+    }
+};
+
+// Transferring mutex ownership between scopes
+// the get_lock() function locks the mutex and then prepares the data before returning the lock to
+// the caller:
+std::unique_lock<std::mutex> get_lock()
+{
+    extern std::mutex some_mutex;
+    std::unique_lock<std::mutex> lk(some_mutex);
+    prepare_data();
+    // this transfer is automatic, without a call to std:move();
+    // the compiler takes care of calling the move constructor
+    return lk;
+}
+
+void process_data()
+{
+    std::unique_lock<std::mutex> lk(get_lock());
+    // rely on the data being correctly prepared without another thread altering the data in the
+    // meantime
+    do_something();
+}
+
+// You don’t need the mutex locked across the call to process(), so you manually unlock it before
+// the call and then lock it again afterward
+void get_and_process_data()
+{
+    std::unique_lock<std::mutex> my_lock(the_mutex);
+    some_class data_to_process = get_next_data_chunk();
+    my_lock.unlock(); // don’t need mutex locked across the call to process()
+    result_type result = process(data_to_process);
+    my_lock.lock(); // Relock mutex to write result
+    write_result(data_to_process, result);
+}
+
+// Listing 3.10 Locking one mutex at a time in a comparison operator
+class Y
+{
+private:
+    int some_detail;
+    mutable std::mutex m;
+
+    int get_detail() const
+    {
+        std::lock_guard<std::mutex> lock_a(m);
+        return some_detail;
+    }
+
+public:
+    Y(int sd)
+        : some_detail(sd)
+    {
+    }
+
+    friend bool operator==(Y const &lhs, Y const &rhs)
+    {
+        if (&lhs == &rhs)
+            return true;
+        int const lhs_value = lhs.get_detail();
+        int const rhs_value = rhs.get_detail();
+        return lhs_value == rhs_value;
+    }
+};
+
+// Lazy initialization such as this is common in single-threaded code—each
+// operation that requires the resource first checks to see if it has been initialized and then
+// initializes it before use if not:
+std::shared_ptr<some_resource> resource_ptr;
+
+void foo()
+{
+    if (!resource_ptr)
+    {
+        resource_ptr.reset(new some_resource);
+    }
+    resource_ptr->do_something();
+}
+
+// Listing 3.11 Thread-safe lazy initialization using a mutex
+std::mutex resource_mutex;
+
+void foo1()
+{
+    std::unique_lock<std::mutex> lk(resource_mutex); // All threads are serialized here
+    if (!resource_ptr)
+    {
+        resource_ptr.reset(new some_resource); // Only the initialization needs protection
+    }
+    lk.unlock();
+    resource_ptr->do_something();
+}
+
+// infamous double-checked locking pattern:
+// this pattern is infamous for a reason: it has the potential for nasty race
+// conditions, because the read outside the lock, isn’t synchronized with the write
+// done by another thread inside the lock. This creates a race condition that covers
+// not only the pointer itself but also the object pointed to; even if a thread sees the
+// pointer written by another thread, it might not see the newly created instance of
+// some_resource, resulting in the call to do_something() operating on incorrect values.
+// This is an example of the type of race condition defined as a data race by the C++
+// Standard and specified as undefined behavior. It’s therefore quite definitely something
+// to avoid.
+void undefined_behaviour_with_double_checked_locking()
+{
+    // the pointer is first read without acquiring the lock , and the lock is acquired only if the
+    // pointer is NULL.
+    if (!resource_ptr)
+    {
+        std::lock_guard<std::mutex> lk(resource_mutex);
+        // The pointer is then checked again once the lock has been acquired (hence the
+        // double-checked part) in case another thread has done the initialization between the first
+        // check and this thread acquiring the lock
+        if (!resource_ptr)
+        {
+            resource_ptr.reset(new some_resource);
+        }
+    }
+    resource_ptr->do_something();
+}
+
+std::shared_ptr<some_resource> resource_ptr;
+std::once_flag resource_flag;
+
+void init_resource()
+{
+    resource_ptr.reset(new some_resource);
+}
+
+void foo()
+{
+    std::call_once(resource_flag, init_resource); // Initialization is called exactly once.
+    resource_ptr->do_something();
+}
+
+// Listing 3.12 Thread-safe lazy initialization of a class member using std::call_once
+class X
+{
+private:
+    connection_info connection_details;
+    connection_handle connection;
+    std::once_flag connection_init_flag;
+
+    void open_connection() { connection = connection_manager.open(connection_details); }
+
+public:
+    X(connection_info const &connection_details_)
+        : connection_details(connection_details_)
+    {
+    }
+
+    // the initialization is done either by the first call to send_data(), or by the first call to
+    // receive_data()
+    void send_data(data_packet const &data)
+    {
+        std::call_once(connection_init_flag, &X::open_connection, this);
+        connection.send_data(data);
+    }
+
+    data_packet receive_data()
+    {
+        std::call_once(connection_init_flag, &X::open_connection, this);
+        return connection.receive_data();
+    }
+};
+
+// Listing 3.13 Protecting a data structure with std::shared_mutex
+class dns_entry;
+
+class dns_cache
+{
+    std::map<std::string, dns_entry> entries;
+    mutable std::shared_mutex entry_mutex;
+
+public:
+    // find_entry() uses an instance of std::shared_lock<> to protect it for
+    // shared, read-only access; multiple threads can therefore call find_entry() simultaneously
+    // without problems.
+    dns_entry find_entry(std::string const &domain) const
+    {
+        std::shared_lock<std::shared_mutex> lk(entry_mutex);
+        std::map<std::string, dns_entry>::const_iterator const it = entries.find(domain);
+        return (it == entries.end()) ? dns_entry() : it->second;
+    }
+
+    // update_or_add_entry() uses an instance of std::lock_guard<> to provide exclusive access while
+    // the table is updated; not only are other threads prevented from doing updates in a call to
+    // update_ or_add_entry(), but threads that call find_entry() are blocked too.
+    void update_or_add_entry(std::string const &domain, dns_entry const &dns_details)
+    {
+        std::lock_guard<std::shared_mutex> lk(entry_mutex);
+        entries[domain] = dns_details;
+    }
+};
 
 int main() { }
