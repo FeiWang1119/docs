@@ -326,10 +326,66 @@ dynamic本身只能用于存在虚函数的父子关系的强制类型转换；
 
 ## c++的多态
 
-静态多态和动态多态。
+静态多态（编译器多态）和动态多态（运行时多态）。
 
-静态多态：函数重载实现，编译期；  
-动态多态：虚函数重写，运行期；  
+静态多态：函数重载实现，编译期，早绑定；  
+动态多态：虚函数重写，运行期，晚绑定；  
+
+## 函数重载(overload)和函数重写(override)的区别
+
+函数重载就在允许在相同作用域（类）中存在多个功能类似的同名的函数，这些函数的参数表不同（参数个数或者参数类型或者参数排列顺序不同），const关键字也可以区分。
+注意：不能通过函数返回值类型来区分重载。
+原理：函数名修饰（Name Mangling）。编译器根据函数不同的形参表对同名函数的名称做修饰，然后这些同名函数就成了不同的函数。
+tips: 通过 `objdump -t` 查看符号表。
+![alt text](res/function-overload.png)
+_ZN7Example3sumEii： 前缀_Z表示这是一个 C++ 修饰名（Itanium ABI 规范），7代表Example长度，3代表sum长度， E代表嵌套名称的结束标记。
+  
+重写就是派生类重新定义基类的虚函数，函数签名（函数名、参数、返回值）完全相同， 使用virtual 和 override 关键字。 每个类维护一个虚函数表，每个对象构造时会初始化一个虚函数表指针，该虚函数表指针指向一个虚函数表。虚函数表是一维数组，里面是一组虚函数地址，指向每个虚函数。
+
+``` c++
+class Base {
+public:
+    virtual void display() {
+        cout << "Base class display function" << endl;
+    }
+    int num;
+};
+
+class Derived : public Base {
+public:
+    void display() override {
+        cout << "Derived class display function" << endl;
+    }
+};
+
+Vtable for Base
+Base::_ZTV4Base: 3 entries
+0     (int (*)(...))0
+8     (int (*)(...))(& _ZTI4Base)
+16    (int (*)(...))Base::display
+
+Class Base
+   size=16 align=8
+   base size=12 base align=8
+Base (0x0x13d06060) 0
+    vptr=((& Base::_ZTV4Base) + 16)
+
+Vtable for Derived
+Derived::_ZTV7Derived: 3 entries
+0     (int (*)(...))0
+8     (int (*)(...))(& _ZTI7Derived)
+16    (int (*)(...))Derived::display
+
+Class Derived
+   size=16 align=8
+   base size=12 base align=8
+Derived (0x0x13cc47b8) 0
+    vptr=((& Derived::_ZTV7Derived) + 16)
+Base (0x0x13d06240) 0
+      primary-for Derived (0x0x13cc47b8)
+```
+
+重载的确定是在编译时静态绑定的；虚函数则是在运行时动态绑定。
 
 ## c++11的新特性
 
@@ -459,12 +515,7 @@ Linux 系统目录 `/usr/include /usr/local/include`
 |protected 继承|protected|protected|不可访问（子类也看不见）|
 |private 继承|private|private|不可访问（子类也看不见）|
 
-## 重载(overload)和重写(override)的区别
 
-重载就在允许在相同作用域（类）中存在多个同名的函数，这些函数的参数表不同，和返回值无关，const关键字也可以区分。
-编译器根据函数不同的形参表对同名函数的名称做修饰，然后这些同名函数就成了不同的函数。  
-重写就是派生类重新定义基类的虚函数，函数名、参数、返回值完全相同， 使用virtual 和 override 关键字。  
-重载的确定是在编译时静态绑定的；虚函数则是在运行时动态绑定。
 
 ## derived classes 是否可重新定义继承而来的 `private` virtual 函数？
 
@@ -588,5 +639,23 @@ new/delete 底层调用了 malloc/free 函数。对于内置类型数据而言�
 
 ## 什么是多重继承？
 
-一个类可以从多个基类（父类）继承属性和行为。在C++等支持多重继承的语言中，一个派生类可以同时拥有多个基类。
-多重继承可能引入一些问题，如菱形继承问题, 比如当一个类同时继承了两个拥有相同基类的类，而最终的派生类又同时继承了这两个类时， 可能导致二义性和代码设计上的复杂性。为了解决这些问题，C++ 提供了虚继承, 通过在继承声明中使用 virtual 关键字，可以避免在派生类中生成多个基类的实例，从而解决了菱形继承带来的二义性。
+一个类可以从多个基类（父类）继承属性和行为。
+多重继承可能引入一些问题，如菱形继承问题。
+
+## 怎么解决菱形继承问题？
+
+菱形继承：前提是 C++ 具备多重继承的语言特性。
+一个子类继承多个父类，这些父类又继承相同的父类，就会出现菱形继承。
+
+![alt text](./res/diamond-inheritance.png)
+
+问题： D中有两份A的成员变量，一份从B继承而来，一份从C继承而来，可能有不同的值，带来如下两个问题：
+
+1. 存储空间的浪费。
+2. 二义性。
+
+解决方案： 虚继承，在继承声明中使用 virtual 关键字，可以避免在派生类中生成多个基类的实例。派生类具有唯一基类的实例，通过虚表内的虚基类偏移找到唯一基类的实例，从而解决了菱形继承带来的存储空间浪费和二义性。
+
+![alt text](./res/virtual-inheritance.png)
+
+tips: gcc通过-fdump-lang-class 选项查看类信息。
