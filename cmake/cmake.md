@@ -78,3 +78,56 @@ The `INCLUDE_DIRECTORIES` will be used for the current target only and the `INTE
 ## Conclusion
 
 `PRIVATE` only cares about himself and does not allow inheritance. `INTERFACE` only cares about others and allows inheritance. `PUBLIC` cares about everyone and allows inheritance.
+
+# find_package
+
+find_package(<PackageName> [<version>] [REQUIRED] [COMPONENTS <components>...])
+
+## Two Modes
+
+Table 1: Key Differences Overview
+
+| Feature | Module Mode | Config Mode |
+| :--- | :--- | :--- |
+| File searched | `Find<PackageName>.cmake` | `<PackageName>Config.cmake`<br>or `<lowercase-package>-config.cmake` |
+| Provider | External (CMake, OS, or user) | The package itself |
+| Primary search path | `CMAKE_MODULE_PATH` | `CMAKE_PREFIX_PATH` |
+| Version matching | Limited / heuristic | ✅ Full support (`EXACT`, `VERSION`) |
+| Component support | Limited / manual | ✅ Native (`COMPONENTS`, `OPTIONAL_COMPONENTS`) |
+| Transitive dependencies | Manual handling | ✅ Automatic propagation |
+| Target quality | Generic imported targets | Precise targets with full metadata |
+| Reliability | ⚠️ May be outdated | ✅ Always matches installed package |
+| Control preference | `MODULE` option | `CONFIG` or `NO_MODULE` option |
+
+Table 2: Search Path Comparison
+
+| Search Source | Module Mode | Config Mode |
+| :--- | :--- | :--- |
+| User-specified (`PATHS`/`HINTS`) | ✅ Yes | ✅ Yes |
+| `CMAKE_MODULE_PATH` | ✅ **Primary** | ❌ No |
+| `CMAKE_PREFIX_PATH` | ❌ No | ✅ **Primary** |
+| `<PackageName>_DIR` | ❌ No | ✅ Yes |
+| System paths (e.g., `/usr`, `/usr/local`) | ✅ Yes | ✅ Yes |
+| `PATH` environment variable | ✅ Yes | ✅ Yes |
+
+## Search Priority
+
+Table 1: Module Mode Search Priority
+
+| Priority | Search Location | Description |
+| :---: | :--- | :--- |
+| 1 | User-provided `PATHS` / `HINTS` | Explicit paths passed to `find_package` |
+| 2 | `CMAKE_MODULE_PATH` | User-specified directories (highest priority) |
+| 3 | CMake's built-in module directory | CMake installation's `Modules/` folder |
+
+Table 2: Config Mode Search Priority (Detailed)
+
+| Priority | Search Location | CMake Variable / Source |
+| :---: | :--- | :--- |
+| 1 | Explicit paths from `PATHS` / `HINTS` | Direct arguments to `find_package` |
+| 2 | User CMake variable | `<PackageName>_DIR` (cached) |
+| 3 | User CMake path variables | `CMAKE_PREFIX_PATH`, `CMAKE_FRAMEWORK_PATH`, `CMAKE_APPBUNDLE_PATH` |
+| 4 | User environment variables | `<PackageName>_DIR` (env) |
+| 5 | System environment variables | `CMAKE_PREFIX_PATH`, `CMAKE_FRAMEWORK_PATH`, `CMAKE_APPBUNDLE_PATH` (env) |
+| 6 | `PATH` environment variable | System `PATH` (derived directories) |
+| 7 | System default paths | `/usr`, `/usr/local`, `/opt`, registry keys (Windows) |
